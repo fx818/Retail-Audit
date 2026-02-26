@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retail Orientation + Threshold Auditor v14</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+      background: #0a0b10;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0a0b10;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #252836;
+      border-radius: 3px;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .45;
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -400px 0;
+      }
+
+      100% {
+        background-position: 400px 0;
+      }
+    }
+
+    #header {
+      background: linear-gradient(135deg, #0d0f1a 0%, #1a1428 100%);
+      border-bottom: 1px solid #252836;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    #header-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 10px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    #header h1 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -.4px;
+    }
+
+    #header p {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    #app {
+      padding: 28px 32px;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .upload-card {
+      background: #1a1d28;
+      border: 1px solid #252836;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      animation: fadeIn .3s ease;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #f59e0b;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .drop-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .dropzone {
+      flex: 1;
+      min-width: 240px;
+      border: 2px dashed #2e3248;
+      border-radius: 14px;
+      padding: 28px 20px;
+      cursor: pointer;
+      background: #13151f;
+      transition: all .2s;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .dropzone:hover,
+    .dropzone.hover {
+      border-color: #f59e0b;
+      background: #1a1a2e;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px #f59e0b18;
+    }
+
+    .dropzone.loaded {
+      border-color: #14b8a6;
+      background: #0c1e1c;
+      border-style: solid;
+    }
+
+    .dz-icon {
+      font-size: 34px;
+      margin-bottom: 10px;
+      line-height: 1;
+    }
+
+    .dz-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .dropzone.loaded .dz-title {
+      color: #14b8a6;
+    }
+
+    .dz-sub {
+      font-size: 11px;
+      color: #4b5563;
+    }
+
+    #btn-run {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 15px;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all .25s;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      box-shadow: 0 4px 24px #f59e0b35;
+      letter-spacing: .2px;
+    }
+
+    #btn-run:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px #f59e0b50;
+    }
+
+    #btn-run:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #btn-run .btn-icon {
+      font-size: 18px;
+    }
+
+    #error-banner {
+      display: none;
+      margin-top: 14px;
+      background: #2d0f0f;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #fca5a5;
+      font-size: 13px;
+    }
+
+    .state-box {
+      background: #1a1d28;
+      border: 1px solid #252836;
+      border-radius: 16px;
+      padding: 64px 32px;
+      text-align: center;
+      animation: fadeIn .3s ease;
+    }
+
+    .state-icon {
+      font-size: 52px;
+      margin-bottom: 16px;
+    }
+
+    .state-title {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .state-sub {
+      color: #6b7280;
+      font-size: 13px;
+      max-width: 420px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .spin {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    .pulse {
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    #progress-wrap {
+      width: 280px;
+      margin: 20px auto 0;
+      height: 4px;
+      background: #252836;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      width: 60%;
+      background: linear-gradient(90deg, #f59e0b44, #f59e0b, #f59e0b44);
+      background-size: 400px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 2px;
+    }
+
+    #progress-step {
+      color: #6b7280;
+      font-size: 11px;
+      margin-top: 10px;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: .5px;
+    }
+
+    #results-section {
+      animation: fadeIn .4s ease;
+    }
+
+    #agent-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tab-agent {
+      padding: 10px 24px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .2s;
+      border: 1px solid #252836;
+      background: #1a1d28;
+      color: #94a3b8;
+    }
+
+    .tab-agent:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .tab-agent.active-retail {
+      background: #14b8a6;
+      color: #000;
+      border-color: transparent;
+      box-shadow: 0 0 18px #14b8a630;
+    }
+
+    .tab-agent.active-price {
+      background: #f59e0b;
+      color: #000;
+      border-color: transparent;
+      box-shadow: 0 0 18px #f59e0b30;
+    }
+
+    #stats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #1a1d28;
+      border: 1px solid #252836;
+      border-radius: 11px;
+      padding: 14px 20px;
+      flex: 1;
+      min-width: 100px;
+      animation: fadeIn .3s ease;
+    }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 3px;
+    }
+
+    #data-card {
+      background: #1a1d28;
+      border: 1px solid #252836;
+      border-radius: 16px;
+      padding: 22px;
+    }
+
+    #bif-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    #bif-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab-bif {
+      padding: 7px 15px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid #252836;
+    }
+
+    .tab-bif:hover {
+      border-color: #3d4163;
+      color: #e2e8f0;
+    }
+
+    .tab-bif.active {
+      background: #252836;
+      color: #f59e0b;
+      border-color: #f59e0b;
+    }
+
+    .tab-bif .cnt {
+      margin-left: 6px;
+      background: #0f1117;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    #btn-download {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      background: #0f2a1a;
+      color: #6ee7a0;
+      border: 1px solid #14532d;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #btn-download:hover {
+      background: #14532d;
+      color: #bbf7d0;
+    }
+
+    #pagination-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    #page-info {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    #page-info b {
+      color: #e2e8f0;
+    }
+
+    #page-btns {
+      display: flex;
+      gap: 4px;
+    }
+
+    .page-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+      background: #1a1d28;
+      color: #94a3b8;
+      border: 1px solid #252836;
+    }
+
+    .page-btn:disabled {
+      opacity: .3;
+      cursor: default;
+    }
+
+    .page-btn.active {
+      background: #f59e0b;
+      color: #000;
+      border-color: #f59e0b;
+    }
+
+    .page-btn:hover:not(:disabled):not(.active) {
+      background: #252836;
+      color: #e2e8f0;
+    }
+
+    #table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #1e2130;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead tr {
+      background: #0d0f17;
+    }
+
+    thead th {
+      padding: 11px 13px;
+      text-align: left;
+      color: #f59e0b;
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      letter-spacing: .6px;
+      border-bottom: 1px solid #1e2130;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1d2a;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #13151e;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: #0f1118;
+    }
+
+    tbody tr:hover {
+      background: #1e2235 !important;
+    }
+
+    tbody td {
+      padding: 9px 13px;
+      color: #d1d5e0;
+      vertical-align: top;
+    }
+
+    td.reason {
+      max-width: 280px;
+      white-space: normal;
+      line-height: 1.55;
+      color: #94a3b8;
+    }
+
+    td.mono {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+    }
+
+    .empty-row td {
+      padding: 52px;
+      text-align: center;
+      color: #4b5563;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: .4px;
+      white-space: nowrap;
+    }
+
+    .b-retail {
+      background: #052e16;
+      color: #86efac;
+      border: 1px solid #14532d;
+    }
+
+    .b-nonretail {
+      background: #450a0a;
+      color: #fca5a5;
+      border: 1px solid #7f1d1d;
+    }
+
+    .b-correct {
+      background: #052e16;
+      color: #86efac;
+      border: 1px solid #14532d;
+    }
+
+    .b-notcorrect {
+      background: #450a0a;
+      color: #fca5a5;
+      border: 1px solid #7f1d1d;
+    }
+
+    .b-high {
+      background: #0c1a33;
+      color: #93c5fd;
+      border: 1px solid #1e3a5f;
+    }
+
+    .b-medium {
+      background: #2e1065;
+      color: #c4b5fd;
+      border: 1px solid #44337a;
+    }
+
+    .b-low {
+      background: #2d0a28;
+      color: #f0abfc;
+      border: 1px solid #4a1942;
+    }
+
+    .b-1 {
+      background: #052e16;
+      color: #86efac;
+      border: 1px solid #14532d;
+    }
+
+    .b-0 {
+      background: #1c1e26;
+      color: #6b7280;
+      border: 1px solid #374151;
+    }
+
+    .b-default {
+      background: #1a1d28;
+      color: #9ca3af;
+      border: 1px solid #374151;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="header">
+    <div id="header-icon">⚡</div>
+    <div>
+      <h1>Retail Orientation + Threshold Auditor</h1>
+      <p>AI-powered BuyLead classification &nbsp;·&nbsp; v14 GTM</p>
+    </div>
+  </div>
+
+  <div id="app">
+
+    <div class="upload-card">
+      <div class="card-label">📂 &nbsp;Upload Sheets &amp; Run</div>
+
+      <div class="drop-row">
+        <div class="dropzone" id="dz-bl" onclick="document.getElementById('fi-bl').click()"
+          ondragover="dzOver(event,'dz-bl')" ondragleave="dzLeave('dz-bl')" ondrop="dzDrop(event,'dz-bl','bl')">
+          <input id="fi-bl" type="file" accept=".csv,.tsv,.txt" style="display:none" onchange="fileChosen(this,'bl')" />
+          <div class="dz-icon" id="dz-bl-icon">📄</div>
+          <div class="dz-title" id="dz-bl-name">BL Sheet</div>
+          <div class="dz-sub">CSV / TSV &nbsp;·&nbsp; drag &amp; drop or click</div>
+        </div>
+
+        <div class="dropzone" id="dz-eve" onclick="document.getElementById('fi-eve').click()"
+          ondragover="dzOver(event,'dz-eve')" ondragleave="dzLeave('dz-eve')" ondrop="dzDrop(event,'dz-eve','eve')">
+          <input id="fi-eve" type="file" accept=".csv,.tsv,.txt" style="display:none"
+            onchange="fileChosen(this,'eve')" />
+          <div class="dz-icon" id="dz-eve-icon">📊</div>
+          <div class="dz-title" id="dz-eve-name">Evidence Sheet</div>
+          <div class="dz-sub">CSV / TSV &nbsp;·&nbsp; drag &amp; drop or click</div>
+        </div>
+      </div>
+
+      <button id="btn-run" onclick="runAudit()">
+        <span class="btn-icon">🚀</span> Run Audit
+      </button>
+
+      <div id="error-banner"></div>
+    </div>
+
+    <div id="empty-state" class="state-box">
+      <div class="state-icon">🔍</div>
+      <div class="state-title">Ready to audit</div>
+      <div class="state-sub">Upload your BL Sheet and Evidence Sheet, then hit <strong>Run Audit</strong>. Both agents
+        will run together and results will appear here.</div>
+      <div
+        style="margin-top:14px;padding:10px 16px;background:#0f1117;border:1px solid #252836;border-radius:8px;font-size:11px;color:#6b7280;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.7">
+        ⚠️ <strong style="color:#94a3b8">Must be served from a web server</strong> — opening as a local file will cause
+        CORS errors.<br>
+        Serve with: <code style="color:#f59e0b;font-family:'DM Mono',monospace">npx serve .</code> or upload to any web
+        host.
+      </div>
+    </div>
+
+    <div id="loading-state" class="state-box" style="display:none">
+      <div class="state-icon spin">⚙️</div>
+      <div class="state-title pulse" style="color:#f59e0b">Running Audit…</div>
+      <div class="state-sub">Both Retail &amp; Price agents are processing your data.</div>
+      <div id="progress-wrap">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="progress-step">INITIALISING</div>
+    </div>
+
+    <div id="results-section" style="display:none">
+      <div id="agent-tabs">
+        <button class="tab-agent" id="tab-retail" onclick="setAgentTab('retail')" disabled>🤖 Retail Agent</button>
+        <button class="tab-agent" id="tab-price" onclick="setAgentTab('price')" disabled>💰 Price Agent</button>
+      </div>
+      <div id="stats-row"></div>
+      <div id="data-card">
+        <div id="bif-row">
+          <div id="bif-tabs"></div>
+          <button id="btn-download" onclick="downloadActive()">⬇ &nbsp;Download CSV</button>
+        </div>
+        <div id="pagination-top">
+          <div id="page-info"></div>
+          <div id="page-btns"></div>
+        </div>
+        <div id="table-wrap">
+          <table>
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    'use strict';
+
+    const WEBHOOK_URL = 'https://imworkflow.intermesh.net/webhook/auditor';
+
+    const S = {
+      blFile: null, eveFile: null,
+      retailData: null, priceData: null,
+      agentTab: 'retail', bifTab: 'retail_sys',
+      page: 1, PAGE_SIZE: 50,
+    };
+
+    const RETAIL_COLS = [
+      { key: 'BL_id', label: 'BL ID', cls: 'mono' },
+      { key: 'Product', label: 'Product', cls: '' },
+      { key: 'Qty', label: 'Qty', cls: 'mono' },
+      { key: 'Unit', label: 'Unit', cls: 'mono' },
+      { key: 'System RT', label: 'System RT', cls: '', badge: true },
+      { key: 'AI Reet', label: 'AI Retail', cls: '', badge: true },
+      { key: 'Unit mprice', label: 'Unit Median Price', cls: 'mono' },
+      { key: 'Mprice', label: 'Order Median', cls: 'mono' },
+      { key: 'AI Reason', label: 'AI Reason', cls: 'reason' },
+    ];
+    const PRICE_COLS = [
+      { key: 'Offer_id', label: 'Offer ID', cls: 'mono' },
+      { key: 'Product', label: 'Product', cls: '' },
+      { key: 'Qty', label: 'Qty', cls: 'mono' },
+      { key: 'Unit', label: 'Unit', cls: 'mono' },
+      { key: 'Unit_median', label: 'Unit Median', cls: 'mono' },
+      { key: 'Median_with_Qty', label: 'Median x Qty', cls: 'mono' },
+      { key: 'TOV_value', label: 'TOV Value', cls: 'mono' },
+      { key: 'classification', label: 'Price Status', cls: '', badge: true },
+      { key: 'confidence', label: 'Confidence', cls: '', badge: true },
+      { key: 'reasoning', label: 'AI Reason', cls: 'reason' },
+    ];
+
+    const RETAIL_BIFS = [
+      { key: 'retail_sys', label: 'Retail — System', filter: r => isSR(r) },
+      { key: 'retail_ai', label: 'Retail — AI', filter: r => nv(r['AI Reet']) === 'retail' },
+      { key: 'nonretail_sys', label: 'Non-Retail — System', filter: r => isNR(r) },
+      { key: 'nonretail_ai', label: 'Non-Retail — AI', filter: r => nv(r['AI Reet']) === 'non-retail' },
+    ];
+    const PRICE_BIFS = [
+      { key: 'price_correct', label: 'Correct Price', filter: r => nv(r['classification']) === 'correct' },
+      { key: 'price_notcorrect', label: 'Not-Correct Price', filter: r => nv(r['classification']) === 'not-correct' },
+    ];
+
+    const nv = v => String(v ?? '').trim().toLowerCase();
+    const isSR = r => { const v = nv(r['System RT']); return v === '1' || v === 'retail'; };
+    const isNR = r => { const v = nv(r['System RT']); return v === '0' || v === 'non-retail'; };
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (!lines.length) return [];
+      const sep = lines[0].includes('\t') ? '\t' : ',';
+      function sl(line) {
+        const res = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+          else if (ch === sep && !inQ) { res.push(cur.trim()); cur = ''; }
+          else cur += ch;
+        }
+        res.push(cur.trim()); return res;
+      }
+      const hdr = sl(lines[0]);
+      return lines.slice(1).filter(l => l.trim()).map(line => {
+        const v = sl(line), o = {};
+        hdr.forEach((h, i) => {
+          let val = v[i] ?? '';
+          // ✨ NEW: Convert purely numeric strings to Numbers automatically (mimics Postman integers)
+          if (val !== '' && !isNaN(val)) val = Number(val);
+          o[h] = val;
+        });
+        return o;
+      });
+    }
+
+    function dzOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('hover'); }
+    function dzLeave(id) { document.getElementById(id).classList.remove('hover'); }
+    function dzDrop(e, id, slot) { e.preventDefault(); dzLeave(id); const f = e.dataTransfer.files[0]; if (f) loadFile(f, slot); }
+    function fileChosen(el, slot) { if (el.files[0]) loadFile(el.files[0], slot); }
+
+    function loadFile(file, slot) {
+      const r = new FileReader();
+      r.onload = ev => {
+        const d = { name: file.name, raw: ev.target.result };
+        if (slot === 'bl') {
+          S.blFile = d;
+          document.getElementById('dz-bl').classList.add('loaded');
+          document.getElementById('dz-bl-icon').textContent = '✅';
+          document.getElementById('dz-bl-name').textContent = file.name;
+        } else {
+          S.eveFile = d;
+          document.getElementById('dz-eve').classList.add('loaded');
+          document.getElementById('dz-eve-icon').textContent = '✅';
+          document.getElementById('dz-eve-name').textContent = file.name;
+        }
+      };
+      r.readAsText(file);
+    }
+
+    function showError(msg) {
+      const b = document.getElementById('error-banner');
+      b.style.display = msg ? 'block' : 'none';
+      b.innerHTML = msg ? '⚠️ &nbsp;' + esc(msg).replace(/\\n/g, '<br>&nbsp;&nbsp;&nbsp;&nbsp;') : '';
+    }
+    function setStep(t) { document.getElementById('progress-step').textContent = t; }
+    function setLoading(on) {
+      document.getElementById('loading-state').style.display = on ? 'block' : 'none';
+      document.getElementById('empty-state').style.display = on ? 'none' : (S.retailData || S.priceData ? 'none' : 'block');
+      document.getElementById('results-section').style.display = !on && (S.retailData || S.priceData) ? 'block' : 'none';
+      document.getElementById('btn-run').disabled = on;
+    }
+
+    async function runAudit() {
+      showError('');
+      if (!S.blFile) { showError('Please upload the BL Sheet first.'); return; }
+      if (!S.eveFile) { showError('Please upload the Evidence Sheet first.'); return; }
+
+      setLoading(true); setStep('PARSING FILES');
+
+      try {
+        const blRows = parseCSV(S.blFile.raw);
+        const eveRows = parseCSV(S.eveFile.raw);
+
+        setStep('SENDING TO WORKFLOW');
+
+        let res;
+        try {
+          // 🚀 HACK: Send as text/plain to bypass the browser's CORS preflight check.
+          // Your n8n code nodes already have JSON.parse() inside them to handle this!
+          res = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+            body: JSON.stringify({
+              bl_data: blRows,
+              evidence_data: eveRows
+            }),
+          });
+        }
+        catch (fetchErr) {
+          throw new Error(
+            'Cannot reach the webhook. Possible causes:\n' +
+            '1. Open this file from a web server, not directly from your desktop (file://).\n' +
+            '2. Make sure the workflow is ACTIVE in n8n (not just saved).\n' +
+            '3. Use the production URL: https://imworkflow.intermesh.net/webhook/auditor — not webhook-test.\n' +
+            'Raw error: ' + fetchErr.message
+          );
+        }
+
+        setStep('AI AGENTS RUNNING');
+
+        if (!res.ok) throw new Error('Webhook returned HTTP ' + res.status + ' ' + res.statusText);
+
+        let json;
+        try { json = await res.json(); }
+        catch (e) { throw new Error('Response was not valid JSON — check n8n Respond node.'); }
+
+        setStep('LOADING RESULTS');
+
+        S.retailData = Array.isArray(json.retail) ? json.retail
+          : Array.isArray(json.results) ? json.results
+            : Array.isArray(json) ? json : [];
+        S.priceData = Array.isArray(json.price) ? json.price : [];
+
+        document.getElementById('tab-retail').disabled = false;
+        document.getElementById('tab-price').disabled = false;
+
+        setLoading(false);
+        setAgentTab('retail');
+
+      } catch (err) {
+        setLoading(false);
+        showError(err.message);
+      }
+    }
+
+    function setAgentTab(tab) {
+      S.agentTab = tab; S.bifTab = (tab === 'retail' ? 'retail_sys' : 'price_correct'); S.page = 1;
+      document.getElementById('tab-retail').className = 'tab-agent' + (tab === 'retail' ? ' active-retail' : '');
+      document.getElementById('tab-price').className = 'tab-agent' + (tab === 'price' ? ' active-price' : '');
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('results-section').style.display = 'block';
+      renderStats(); renderBifTabs(); renderTable();
+    }
+    function setBifTab(key) { S.bifTab = key; S.page = 1; renderBifTabs(); renderTable(); }
+
+    function curBifs() { return S.agentTab === 'retail' ? RETAIL_BIFS : PRICE_BIFS; }
+    function curCols() { return S.agentTab === 'retail' ? RETAIL_COLS : PRICE_COLS; }
+    function curAll() { return (S.agentTab === 'retail' ? S.retailData : S.priceData) || []; }
+    function curRows() { const b = curBifs().find(x => x.key === S.bifTab); return b ? curAll().filter(b.filter) : curAll(); }
+    function bifCnt(key) { const b = curBifs().find(x => x.key === key); return b ? curAll().filter(b.filter).length : 0; }
+
+    function renderStats() {
+      const el = document.getElementById('stats-row'); let h = '';
+      if (S.agentTab === 'retail' && S.retailData) {
+        const d = S.retailData;
+        [['Total Records', d.length, '#f59e0b'],
+        ['Retail — System', d.filter(isSR).length, '#14b8a6'],
+        ['Retail — AI', d.filter(r => nv(r['AI Reet']) === 'retail').length, '#38bdf8'],
+        ['Non-Retail — System', d.filter(isNR).length, '#f43f5e'],
+        ['Non-Retail — AI', d.filter(r => nv(r['AI Reet']) === 'non-retail').length, '#f97316'],
+        ].forEach(([l, v, c]) => h += `<div class="stat-card"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`);
+      } else if (S.agentTab === 'price' && S.priceData) {
+        const d = S.priceData;
+        [['Total Records', d.length, '#f59e0b'],
+        ['Correct Pricing', d.filter(r => nv(r['classification']) === 'correct').length, '#14b8a6'],
+        ['Not-Correct', d.filter(r => nv(r['classification']) === 'not-correct').length, '#f43f5e'],
+        ].forEach(([l, v, c]) => h += `<div class="stat-card"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`);
+      }
+      el.innerHTML = h;
+    }
+
+    function renderBifTabs() {
+      document.getElementById('bif-tabs').innerHTML = curBifs().map(b =>
+        `<button class="tab-bif ${b.key === S.bifTab ? 'active' : ''}" onclick="setBifTab('${b.key}')">${b.label}<span class="cnt">${bifCnt(b.key)}</span></button>`
+      ).join('');
+    }
+
+    function badge(v) {
+      const m = { 'Retail': 'retail', 'Non-Retail': 'nonretail', 'Correct': 'correct', 'Not-Correct': 'notcorrect', 'High': 'high', 'Medium': 'medium', 'Low': 'low', '1': '1', '0': '0' };
+      return `<span class="badge b-${m[String(v)] || 'default'}">${esc(String(v ?? '')) || '—'}</span>`;
+    }
+    function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    function renderTable() {
+      const rows = curRows(), cols = curCols(), total = rows.length;
+      const ps = S.PAGE_SIZE, tp = Math.max(1, Math.ceil(total / ps));
+      if (S.page > tp) S.page = tp;
+      const p = S.page, slice = rows.slice((p - 1) * ps, p * ps);
+      const from = total === 0 ? 0 : (p - 1) * ps + 1;
+      document.getElementById('page-info').innerHTML = `Showing <b>${from}</b>–<b>${Math.min(p * ps, total)}</b> of <b>${total}</b> records`;
+
+      let bh = '';
+      const mk = (l, pg, d, a) => `<button class="page-btn${a ? ' active' : ''}" ${d ? 'disabled' : ''} onclick="goPage(${pg})">${l}</button>`;
+      bh += mk('«', 1, p === 1, false); bh += mk('‹', p - 1, p === 1, false);
+      let st = Math.max(1, p - 2), en = Math.min(tp, st + 4);
+      if (en - st < 4) st = Math.max(1, en - 4);
+      for (let i = st; i <= en; i++) bh += mk(i, i, false, i === p);
+      bh += mk('›', p + 1, p === tp, false); bh += mk('»', tp, p === tp, false);
+      document.getElementById('page-btns').innerHTML = bh;
+
+      document.getElementById('thead').innerHTML = '<tr>' + cols.map(c => `<th>${esc(c.label)}</th>`).join('') + '</tr>';
+      const tbody = document.getElementById('tbody');
+      if (!slice.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="${cols.length}">No records for this filter.</td></tr>`; return; }
+      tbody.innerHTML = slice.map(row => '<tr>' + cols.map(c => {
+        const v = row[c.key] ?? '';
+        return `<td class="${c.cls || ''}">${c.badge ? badge(v) : (esc(v) || '—')}</td>`;
+      }).join('') + '</tr>').join('');
+    }
+
+    function goPage(p) {
+      S.page = p; renderTable();
+      document.getElementById('data-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function downloadActive() {
+      const rows = curRows(), cols = curCols();
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const name = `${S.agentTab}_${S.bifTab}_${ts}.csv`;
+      const hdr = cols.map(c => `"${c.label}"`).join(',');
+      const body = rows.map(r => cols.map(c => `"${String(r[c.key] ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + hdr + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+
+</html>

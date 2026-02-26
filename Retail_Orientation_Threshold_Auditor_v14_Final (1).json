@@ -1,0 +1,1017 @@
+{
+  "name": "Retail Orientation + Threshold Auditor Version 14 - GTM copy",
+  "nodes": [
+    {
+      "parameters": {
+        "functionCode": "const rows = $input.all();\n\nconst map = {};\n\nrows.forEach(item => {\n\n  const e = item.json;\n\n  const glcat_mcat_id = e.glcat_mcat_id || \"Unknown_ID\";\n  const glcat_mcat_name = e.glcat_mcat_name || \"Unknown\";\n\n  const rawUnit = (e.eto_ofr_qty_unit || \"\").trim().toLowerCase();\n  const qty = Number(e.eto_ofr_qty || 0);\n\n  //--------------------------------------------------\n  // 🔥 DATA VALIDITY LAYER\n  //--------------------------------------------------\n\n  const invalidQty = qty <= 0;\n  const missingUnit = !rawUnit;\n\n  let eto_ofr_qty_unit, slab;\n\n  if (missingUnit || invalidQty) {\n\n    eto_ofr_qty_unit = \"no_unit\";\n    slab = \"no_slab\";\n  }\n  else {\n\n    eto_ofr_qty_unit = rawUnit;\n\n    if (qty <= 10) slab = \"1-10\";\n    else if (qty <= 25) slab = \"11-25\";\n    else if (qty <= 50) slab = \"26-50\";\n    else if (qty <= 100) slab = \"51-100\";\n    else slab = \"100+\";\n  }\n\n  //--------------------------------------------------\n\n  const key = `${glcat_mcat_id}_${eto_ofr_qty_unit}_${slab}`;\n\n  if (!map[key]) {\n    map[key] = {\n      glcat_mcat_id,          //  PRIMARY KEY\n      glcat_mcat_name,        // DISPLAY CONTEXT\n      eto_ofr_qty_unit,\n      slab,\n      bl_apprvd: 0,\n      pur: 0,\n      pur_retailer: 0,\n      pur_wholesaler: 0,\n      retail_ni: 0,\n      ni_retailer: 0,\n      ni_wholesaler: 0\n    };\n  }\n\n  //--------------------------------------------------\n\n  map[key].bl_apprvd += Number(e.bl_apprvd || 0);\n  map[key].pur += Number(e.pur || 0);\n  map[key].pur_retailer += Number(e.pur_retailer || 0);\n  map[key].pur_wholesaler += Number(e.pur_wholesaler || 0);\n  map[key].retail_ni += Number(e.retail_ni || 0);\n  map[key].ni_retailer += Number(e.ret_ni_cnt_retailer || 0);\n  map[key].ni_wholesaler += Number(e.ret_ni_cnt_wholesaler || 0);\n});\n\nreturn Object.values(map).map(r => ({ json: r }));"
+      },
+      "id": "31412569-b17c-4dff-b427-715e5665805d",
+      "name": "Aggregate Evidence Behaviour",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "mergeByIndex"
+      },
+      "id": "b97ffbfc-0dc8-4c74-973d-558c82f39763",
+      "name": "Merge BL + Behaviour",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -288
+      ],
+      "alwaysOutputData": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "google/gemini-2.0-flash"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1200,
+        -48
+      ],
+      "id": "6e378264-2833-482b-abfa-ed2376bd091b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "aZahQRpyum58iEi8",
+          "name": "OpenAi account 155"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU",
+          "mode": "list",
+          "cachedResultName": "Audit Primary O/P Sheet_Eve_Anthrpc",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "BL_id": "={{ $json.Offer_id }}",
+            "Product": "={{ $json.Product }}",
+            "Qty": "={{ $json.Qty }}",
+            "Unit": "={{ $json.Unit }}",
+            "AI Reason": "={{ $json.reasoning }}",
+            "AI Reet": "={{ $json.classification }}",
+            "Unit mprice": "={{ $json.Unit_median }}",
+            "Mprice": "={{ $json.Order_Median }}",
+            "System RT": "={{ $json.SRT_Flag }}"
+          },
+          "matchingColumns": [
+            "BL_id"
+          ],
+          "schema": [
+            {
+              "id": "BL_id",
+              "displayName": "BL_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qty",
+              "displayName": "Qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mprice",
+              "displayName": "Mprice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit mprice",
+              "displayName": "Unit mprice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "System RT",
+              "displayName": "System RT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Reet",
+              "displayName": "AI Reet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "R_threshold",
+              "displayName": "R_threshold",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Reason",
+              "displayName": "AI Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        0
+      ],
+      "id": "9e694842-d320-4e3c-b0b0-534f5e5d2f0a",
+      "name": "Auditor Output",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4g8P98mXUl33lLtD",
+          "name": "Google Sheets account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n\n  item.json.glcat_mcat_id =\n    Number(item.json.glcat_mcat_id);   // ✅ SAME TYPE\n\n  item.json.eto_ofr_qty_unit =\n    (item.json.eto_ofr_qty_unit || \"\")\n      .toString()\n      .trim()\n      .toLowerCase();\n\n  return item;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -304
+      ],
+      "id": "db588a3b-d7e9-4f05-824d-44ca9a660e03",
+      "name": "BL Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n\n  item.json.glcat_mcat_id =\n    Number(item.json.glcat_mcat_id);   // ✅ SAME TYPE\n\n  item.json.eto_ofr_qty_unit =\n    (item.json.eto_ofr_qty_unit || \"\")\n      .toString()\n      .trim()\n      .toLowerCase();\n\n  return item;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -16
+      ],
+      "id": "379b0529-1356-4882-abbf-8159222bb4f7",
+      "name": "Category Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "//--------------------------------------------------\n// ✅ Inputs\n//--------------------------------------------------\n\nconst bl = $items(\"BL Data\")[0].json;\nconst dataset = $items(\"Category Data\");\n\n//--------------------------------------------------\n// ✅ Normalize BL\n//--------------------------------------------------\n\nconst blMCAT = Number(bl.glcat_mcat_id);\n\nconst blUnit = (bl.eto_ofr_qty_unit || \"\")\n  .toString()\n  .trim()\n  .toLowerCase();\n\nconst qty = Number(bl.eto_ofr_qty || 0);\n\n//--------------------------------------------------\n// ✅ Slab Definitions 🔥\n//--------------------------------------------------\n\nconst slabs = [\n  { name: \"1-10\", min: 1, max: 10 },\n  { name: \"11-25\", min: 11, max: 25 },\n  { name: \"26-50\", min: 26, max: 50 },\n  { name: \"51-100\", min: 51, max: 100 },\n  { name: \"100+\", min: 101, max: Infinity }\n];\n\n//--------------------------------------------------\n// ✅ Compute Nearest Slab\n//--------------------------------------------------\n\nlet nearestSlab = slabs[0];\nlet smallestDistance = Infinity;\n\nslabs.forEach(slab => {\n\n  const midpoint =\n    slab.max === Infinity\n      ? slab.min\n      : (slab.min + slab.max) / 2;\n\n  const distance = Math.abs(qty - midpoint);\n\n  if (distance < smallestDistance) {\n    smallestDistance = distance;\n    nearestSlab = slab;\n  }\n});\n\n//--------------------------------------------------\n// ✅ Filter Dataset\n//--------------------------------------------------\n\nconst matches = dataset.filter(item => {\n\n  const row = item.json;\n\n  const rowMCAT = Number(row.glcat_mcat_id);\n\n  const rowUnit = (row.eto_ofr_qty_unit || \"\")\n    .toString()\n    .trim()\n    .toLowerCase();\n\n  return (\n    rowMCAT === blMCAT &&\n    rowUnit === blUnit &&\n    row.slab === nearestSlab.name\n  );\n});\n\n//--------------------------------------------------\n// ✅ Output (SINGLE ITEM 🔥🔥)\n//--------------------------------------------------\n\nif (!matches.length) {\n  return [{ json: { ...bl, resolved_slab: nearestSlab.name } }];\n}\n\nreturn [{\n  json: {\n    ...bl,\n    resolved_slab: nearestSlab.name,\n    ...matches[0].json\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -112
+      ],
+      "id": "b8fc552e-8507-45c4-9955-ad8132613f39",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\n//--------------------------------------------------\n// ✅ Merge BOTH items into ONE object\n//--------------------------------------------------\n\nlet bl = {};\n\nitems.forEach(item => {\n  bl = {\n    ...bl,\n    ...item.json\n  };\n});\n\n//--------------------------------------------------\n// ✅ Rounding helper\n//--------------------------------------------------\n\nconst round = (val) => Math.round(val * 100) / 100;\n\n//--------------------------------------------------\n// ✅ Behaviour Calculations\n//--------------------------------------------------\n\nconst bl_apprvd = Number(bl.bl_apprvd || 1);\n\nconst RAS = round(Number(bl.pur_retailer || 0) / bl_apprvd);\nconst WAS = round(Number(bl.pur_wholesaler || 0) / bl_apprvd);\nconst WFS = round(Number(bl.ni_wholesaler || 0) / bl_apprvd);\nconst ROG = round(RAS - WAS);\n\n//--------------------------------------------------\n// ✅ Quantity Intelligence\n//--------------------------------------------------\n\nconst qty = Number(bl.eto_ofr_qty || 0);\nlet qtyScore = 0;\n\nif (qty <= 10) qtyScore = 2;\nelse if (qty <= 50) qtyScore = 1;\nelse if (qty <= 200) qtyScore = -1;\nelse qtyScore = -2;\n\n//--------------------------------------------------\n// ✅ Economic Intelligence\n//--------------------------------------------------\n\nconst EOV = round(qty * Number(bl.unit_median_price || 0));\nconst CRS = round((ROG * 3) + qtyScore);\n\n//--------------------------------------------------\n// ✅ SINGLE deterministic output 🔥🔥\n//--------------------------------------------------\n\nreturn [{\n  json: {\n    ...bl,\n    RAS,\n    WAS,\n    WFS,\n    ROG,\n    qtyScore,\n    CRS,\n    EOV\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        -288
+      ],
+      "id": "58368724-df5b-4c84-9287-582d14e11e8e",
+      "name": "combined Data Node"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        112,
+        -272
+      ],
+      "id": "28ce1616-2a94-4c31-86a2-9705ec80af70",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "google/gemini-2.5-flash"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        -400
+      ],
+      "id": "6c28d555-99af-4981-a082-19b32ad92bde",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "aZahQRpyum58iEi8",
+          "name": "OpenAi account 155"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $json.decision || $json.output || $json.text || \"\";\n\n// Remove ANY markdown artifacts\nraw = raw\n  .replace(/```json/gi, \"\")\n  .replace(/```/g, \"\")\n  .replace(/`json/gi, \"\")\n  .trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n\n  // Intelligent fallback (very important)\n  parsed = {\n    Offer_id: $json.eto_ofr_display_id || null,\n    classification: \"Error\",\n    confidence: \"Low\",\n    reasoning: \"AI response not valid JSON\",\n    raw_response: raw\n  };\n}\n\nreturn { json: parsed };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -288
+      ],
+      "id": "1ab4d585-07fb-4e9b-bf62-c6481bbb4ceb",
+      "name": "Formatter"
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $json.decision || $json.output || $json.text || \"\";\n\n// Remove ANY markdown artifacts\nraw = raw\n  .replace(/```json/gi, \"\")\n  .replace(/```/g, \"\")\n  .replace(/`json/gi, \"\")\n  .trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (err) {\n\n  // Intelligent fallback (very important)\n  parsed = {\n    Offer_id: $json.eto_ofr_display_id || null,\n    classification: \"Error\",\n    confidence: \"Low\",\n    reasoning: \"AI response not valid JSON\",\n    raw_response: raw\n  };\n}\n\nreturn { json: parsed };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -576
+      ],
+      "id": "2b0e0112-0bcf-4991-8d09-42361d04ace5",
+      "name": "O/P formatter"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU",
+          "mode": "list",
+          "cachedResultName": "Audit Primary O/P Sheet_Eve_Anthrpc",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1260044104,
+          "mode": "list",
+          "cachedResultName": "Price Audit",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZMJTox58UdkeUrWmuCFV27StRm-YO7h86RT8rEv6bcU/edit#gid=1260044104"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Offer_id": "={{ $json.Offer_id }}",
+            "Product": "={{ $json.Product }}",
+            "Qty": "={{ $json.Qty }}",
+            "Unit": "={{ $json.Unit }}",
+            "Median_with_Qty": "={{ $json.Median_with_Qty }}",
+            "TOV_value": "={{ $json.TOV_value }}",
+            "Unit_median": "={{ $json.Unit_median }}",
+            "classification": "={{ $json.classification }}",
+            "confidence": "={{ $json.confidence }}",
+            "reasoning": "={{ $json.reasoning }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Offer_id",
+              "displayName": "Offer_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qty",
+              "displayName": "Qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Median_with_Qty",
+              "displayName": "Median_with_Qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TOV_value",
+              "displayName": "TOV_value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit_median",
+              "displayName": "Unit_median",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "classification",
+              "displayName": "classification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1840,
+        -576
+      ],
+      "id": "adbd35de-ffec-4eb0-9305-a4cee2b20680",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4g8P98mXUl33lLtD",
+          "name": "Google Sheets account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.CRS}}\n{{$json.ROG}}\n{{$json.RAS}}\n{{$json.WAS}}\n{{$json.EOV}}\n{{$json.glcat_mcat_name}}\n{{$json.eto_ofr_qty}}\n{{$json.eto_ofr_qty_unit}}\n{{ $json.eto_ofr_display_id }}\n\n{{ $json.unit_median_price }}\n{{ $json.median_with_qty }}\n{{ $json.retail_flag }}",
+        "options": {
+          "systemMessage": "=System Role:\nYou are a B2B Retail Classification Auditor for the Indian market. Your goal is to determine if a BuyLead is Retail (end-use/small-shop scale) or Non-Retail (industrial/wholesale/bulk-business scale).\n\nDecision Pillars (Weighted by Importance):\n\nUnit & Scale Logic (High Weight): * Distinguish between \"Bulk Units\" (Tonne, Metric Tonne, Quintal) and \"Standard Units\" (Kg, Ltr, Pcs).\n\nHeuristic: If the unit itself implies a commercial shipment size (e.g., 5000 kg), it is Non-Retail. However, do not auto-classify \"Kg\" or \"Ltr\" as retail without checking the product.\n\nProduct-Category Intent (Highest Weight): * Industrial/B2B Use: Evaluate if the glcat_mcat_name is an input for a business process (e.g., solvents, machinery parts, raw chemicals). These are Non-Retail even in small quantities.\n\nConsumer/Retail Use: Evaluate if the product is a finished good (e.g., Ghee, Tea, Stationery). Use the quantity to decide: is this for a household (Retail) or a warehouse (Non-Retail)?\n\nStatistical Signals (Evidence): * Use ROG and CRS as historical evidence of how others in this category behave.\n\nNote: Historical data is a guide, not a mandate. If the current quantity/unit contradicts the history (e.g., a usually retail category being ordered in 50 Metric Tonnes), follow the Current Scale.\n\nAnalytical Task:\nAnalyze the input JSON. You must infer the \"Usage Context\" of the product within the Indian market. For example, recognize that 100 pieces of a low-value item (like tea cups) is a retail-scale \"box,\" whereas 100 pieces of a high-value item (like motors) is non-retail.\n\nStrict Output Format (Raw JSON Only):\n\nJSON\n{\n  \"Offer_id\": {{$json.eto_ofr_display_id}},\n  \"Product\": \"{{$json.glcat_mcat_name}}\",\n  \"Qty\": {{$json.eto_ofr_qty}},\n  \"Unit\": \"{{$json.eto_ofr_qty_unit}}\",\n  \"CRS\": {{$json.CRS}},\n  \"ROG\": {{$json.ROG}},\n  \"Order_Median\": {{$json.eto_ofr_qty * $json.unit_median_price }},\n  \"Unit_median\": {{ $json.unit_median_price }},\n  \"SRT_Flag\": {{ $json.retail_flag }},\n  \"classification\": \"Retail | Non-Retail\",\n  \"confidence\": \"High | Medium | Low\",\n  \"reasoning\": \"Explain based on the interplay between product nature, unit scale, and historical scores. [IN MAXIMUM 30 WORDS]\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1216,
+        -288
+      ],
+      "id": "a8fdff6c-8de8-4185-aae3-fc2f1e78fa9a",
+      "name": "Retail Classification Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.eto_ofr_display_id }}\n{{ $json.glcat_mcat_name }}\n{{ $json.eto_ofr_qty }} {{ $json.eto_ofr_qty_unit }}\n{{ $json.median_with_qty }}\n{{ $json.display_tov_value }}\n{{ $json.unit_median_price }}",
+        "options": {
+          "systemMessage": "=You are an expert Indian B2B marketplace price Expert.\n\nYour job is to evaluate whether the provided pricing information is economically realistic for Indian wholesale trade.\n\nYou must reason like a B2B trader, mandi participant, and procurement analyst — not like a retail consumer.\n\nInput Data\n\nOffer Details:\nOffer ID: {{ $json.eto_ofr_display_id }}\nProduct Name: {{ $json.glcat_mcat_name }}\nQuantity: {{ $json.eto_ofr_qty }}\nUnit: {{ $json.eto_ofr_qty_unit }}\nUnit Median Price: {{ $json.unit_median_price }}\nMedian with Quantity: {{ $json.median_with_qty }}\nDisplayed TOV Range: {{ $json.display_tov_value }}\n\nEvaluation Rules\n\nValidate price realism using:\n• Product nature (commodity vs packaging vs machinery vs chemicals vs services)\n• Unit scale economics (kg vs tonne vs piece vs box vs meter vs litre)\n• Wholesale vs retail logic\n• Indian mandi / bulk trade price intuition\n• Quantity scaling consistency\n• Typical Indian B2B price bands\n• Obvious magnitude errors (10× / 100× / 1000× mistakes)\n• Practical trader plausibility\n\nCritical Reasoning Logic\nCheck if Unit Median Price is realistic for India.\nDetect magnitude mismatch (example: tonne priced like kg).\nDetect economic absurdities:\nCommodities priced too low\nPackaging priced like machinery\nIndustrial goods priced like retail items\nUse real-world Indian trade intuition, not strict databases.\n\nOutput Format (STRICT JSON ONLY)\n\nReturn ONLY valid JSON:\n\n{\n\"Offer_id\": {{ $json.eto_ofr_display_id }},\n\"Product\": \"{{ $json.glcat_mcat_name }}\",\n\"Qty\": {{ $json.eto_ofr_qty }},\n\"Unit\": \"{{ $json.eto_ofr_qty_unit }}\",\n\"Median_with_Qty\": {{ $json.median_with_qty }},\n\"TOV_value\": \"{{ $json.display_tov_value }}\",\n\"Unit_median\": {{ $json.unit_median_price }},\n\"classification\": \"Correct | Not-Correct\",\n\"confidence\": \"High | Medium | Low\",\n\"reasoning\": \"Explain judgement using Indian B2B pricing logic in MAXIMUM 30 WORDS\"\n}\n\nClassification Guidance\nCorrect → Pricing looks economically believable\nNot-Correct → Pricing violates Indian wholesale logic / unit economics / magnitude sanity\n\nConfidence:\nHigh → Clear pricing correctness or absurdity\nMedium → Some ambiguity / niche product\nLow → Highly uncertain / volatile / specialized category"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1232,
+        -576
+      ],
+      "id": "3d4c91e6-9eb3-4948-921b-71a33d5a0e9b",
+      "name": "Price Expert"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle both text/plain and application/json from browser\nconst raw = $json.body;\nconst body = (typeof raw === 'string') ? JSON.parse(raw) : (raw || $json);\n\nconst blRows  = body.bl_data       || [];\nconst eveRows = body.evidence_data || [];\n\n// Stash BL rows in static data for the loop\nconst staticData = $getWorkflowStaticData('global');\nstaticData.blRows = blRows;\n\n// Emit evidence rows to Aggregate Evidence Behaviour\nreturn eveRows.map(r => ({ json: r }));"
+      },
+      "id": "parse-retail-001-0000-0000-000000000003",
+      "name": "Parse BL + Evidence Data (Retail)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst blRows = staticData.blRows || [];\nreturn blRows.map(r => ({ json: r }));"
+      },
+      "id": "emit-bl-retail-0000-0000-000000000004",
+      "name": "Emit BL Rows for Loop (Retail)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle both text/plain and application/json from browser\nconst raw = $json.body;\nconst body = (typeof raw === 'string') ? JSON.parse(raw) : (raw || $json);\n\nconst blRows  = body.bl_data       || [];\nconst eveRows = body.evidence_data || [];\n\n// Stash in static data\nconst staticData = $getWorkflowStaticData('global');\nstaticData.blRowsPrice  = blRows;\nstaticData.eveRowsPrice = eveRows;\n\n// Emit BL rows to price loop\nreturn blRows.map(r => ({ json: r }));"
+      },
+      "id": "parse-price-001-0000-0000-000000000005",
+      "name": "Parse BL + Evidence Data (Price)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── Gather all results accumulated during the loop ─────────────────\nconst staticData = $getWorkflowStaticData('global');\nconst results = staticData.retailResults || [];\n// Clear for next run\nstaticData.retailResults = [];\nreturn [{ json: { results } }];"
+      },
+      "id": "collect-retail-000-0000-0000-000000000006",
+      "name": "Collect Retail Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.retailResults) staticData.retailResults = [];\nstaticData.retailResults.push($json);\nreturn [{ json: $json }];"
+      },
+      "id": "store-retail-000-0000-0000-000000000007",
+      "name": "Store Retail Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst results = staticData.priceResults || [];\nstaticData.priceResults = [];\nreturn [{ json: { results } }];"
+      },
+      "id": "collect-price-000-0000-0000-000000000009",
+      "name": "Collect Price Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -672
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.priceResults) staticData.priceResults = [];\nstaticData.priceResults.push($json);\nreturn [{ json: $json }];"
+      },
+      "id": "store-price-0000-0000-0000-000000000010",
+      "name": "Store Price Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        112,
+        -576
+      ],
+      "id": "loop-price-00000-0000-0000-000000000011",
+      "name": "Loop Over Items - Price"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  item.json.glcat_mcat_id = Number(item.json.glcat_mcat_id);\n  item.json.eto_ofr_qty_unit = (item.json.eto_ofr_qty_unit || '')\n    .toString().trim().toLowerCase();\n  return item;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -576
+      ],
+      "id": "bl-data-price-000-0000-0000-000000000013",
+      "name": "BL Data - Price"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auditor",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "single-webhook-0000-0000-0000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        -400
+      ],
+      "webhookId": "auditor-v14"
+    },
+    {
+      "parameters": {
+        "mode": "mergeByIndex"
+      },
+      "id": "merge-results-0000-0000-0000-000000000020",
+      "name": "Merge Both Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ retail: $input.all()[0]?.json?.results ?? [], price: $input.all()[1]?.json?.results ?? [] }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, GET, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-single-0000-0000-0000-000000000021",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        -400
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Aggregate Evidence Behaviour": {
+      "main": [
+        [
+          {
+            "node": "Category Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge BL + Behaviour": {
+      "main": [
+        [
+          {
+            "node": "combined Data Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Retail Classification Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BL Data": {
+      "main": [
+        [
+          {
+            "node": "Merge BL + Behaviour",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category Data": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Emit BL Rows for Loop (Retail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge BL + Behaviour",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "combined Data Node": {
+      "main": [
+        [
+          {
+            "node": "Retail Classification Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Retail Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BL Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Price Expert",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatter": {
+      "main": [
+        [
+          {
+            "node": "Auditor Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "O/P formatter": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retail Classification Agent": {
+      "main": [
+        [
+          {
+            "node": "Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Price Expert": {
+      "main": [
+        [
+          {
+            "node": "O/P formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse BL + Evidence Data (Retail)": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Evidence Behaviour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emit BL Rows for Loop (Retail)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auditor Output": {
+      "main": [
+        [
+          {
+            "node": "Store Retail Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Retail Result": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Retail Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Both Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse BL + Evidence Data (Price)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items - Price": {
+      "main": [
+        [
+          {
+            "node": "Collect Price Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BL Data - Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BL Data - Price": {
+      "main": [
+        [
+          {
+            "node": "Price Expert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Store Price Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Price Result": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Price Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Both Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse BL + Evidence Data (Retail)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse BL + Evidence Data (Price)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Both Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c332b3bb-aa01-45a0-9cac-be80b0939bae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "17519d3ef9735db55aeaaca554134cc04945a8942840756f95f4251d52adf708"
+  },
+  "id": "0zRummoplzaIHSyw",
+  "tags": []
+}
