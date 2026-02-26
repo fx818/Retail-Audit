@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Retail Auditor Dashboard Server
-Run: python server.py  then open http://localhost:8080/audit-dashboard.html
+Run: python server.py  then open http://localhost:8080/index.html
 """
 import http.server
 import socketserver
@@ -38,7 +38,7 @@ class AuditorHandler(http.server.SimpleHTTPRequestHandler):
         # Log file uploads and API calls
         if len(args) > 2:
             path = args[1]
-            if 'audit-dashboard.html' in path:
+            if 'index.html' in path:
                 print(f"    📄 Dashboard loaded")
             elif path.startswith('/webhook') or 'auditor' in path:
                 print(f"    🔗 API call detected: {path}")
@@ -70,7 +70,7 @@ def main():
             print("🚀 Retail Auditor Dashboard Server")
             print("=" * 50)
             print(f"✅ Server running on http://localhost:{PORT}")
-            print(f"📄 Dashboard: http://localhost:{PORT}/audit-dashboard.html")
+            print(f"📄 Dashboard: http://localhost:{PORT}/index.html")
             print(f"📁 Serving from: {os.getcwd()}")
             print("=" * 50)
             print("📊 Features enabled:")
