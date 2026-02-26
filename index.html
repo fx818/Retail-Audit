@@ -249,9 +249,10 @@
       background: #2d0f0f;
       border: 1px solid #7f1d1d;
       border-radius: 8px;
-      padding: 10px 14px;
+      padding: 14px;
       color: #fca5a5;
       font-size: 13px;
+      line-height: 1.6;
     }
 
     .state-box {
@@ -700,15 +701,7 @@
     <div id="empty-state" class="state-box">
       <div class="state-icon">🔍</div>
       <div class="state-title">Ready to audit</div>
-      <div class="state-sub">Upload your BL Sheet and Evidence Sheet, then hit <strong>Run Audit</strong>. Both agents
-        will run together and results will appear here.</div>
-      <div
-        style="margin-top:14px;padding:10px 16px;background:#0f1117;border:1px solid #252836;border-radius:8px;font-size:11px;color:#6b7280;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.7">
-        ⚠️ <strong style="color:#94a3b8">Must be served from a web server</strong> — opening as a local file will cause
-        CORS errors.<br>
-        Serve with: <code style="color:#f59e0b;font-family:'DM Mono',monospace">npx serve .</code> or upload to any web
-        host.
-      </div>
+      <div class="state-sub">Upload your BL Sheet and Evidence Sheet, then hit <strong>Run Audit</strong>.</div>
     </div>
 
     <div id="loading-state" class="state-box" style="display:none">
@@ -750,7 +743,7 @@
   <script>
     'use strict';
 
-    const WEBHOOK_URL = 'https://imworkflow.intermesh.net/webhook/auditor';
+    const WEBHOOK_URL = 'https://imworkflow.intermesh.net/webhook-test/auditor';
 
     const S = {
       blFile: null, eveFile: null,
@@ -817,7 +810,6 @@
         const v = sl(line), o = {};
         hdr.forEach((h, i) => {
           let val = v[i] ?? '';
-          // ✨ NEW: Convert purely numeric strings to Numbers automatically (mimics Postman integers)
           if (val !== '' && !isNaN(val)) val = Number(val);
           o[h] = val;
         });
@@ -852,7 +844,7 @@
     function showError(msg) {
       const b = document.getElementById('error-banner');
       b.style.display = msg ? 'block' : 'none';
-      b.innerHTML = msg ? '⚠️ &nbsp;' + esc(msg).replace(/\\n/g, '<br>&nbsp;&nbsp;&nbsp;&nbsp;') : '';
+      b.innerHTML = msg ? '⚠️ &nbsp;' + msg;
     }
     function setStep(t) { document.getElementById('progress-step').textContent = t; }
     function setLoading(on) {
@@ -873,36 +865,41 @@
         const blRows = parseCSV(S.blFile.raw);
         const eveRows = parseCSV(S.eveFile.raw);
 
+        const payload = {
+          bl_data: blRows,
+          evidence_data: eveRows
+        };
+
+        console.log("Constructed payload matches Postman format:", payload);
+
         setStep('SENDING TO WORKFLOW');
 
         let res;
         try {
-          // 🚀 HACK: Send as text/plain to bypass the browser's CORS preflight check.
-          // Your n8n code nodes already have JSON.parse() inside them to handle this!
+          // Send EXACTLY the same headers as Postman.
           res = await fetch(WEBHOOK_URL, {
             method: 'POST',
             headers: {
-              'Content-Type': 'text/plain',
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              bl_data: blRows,
-              evidence_data: eveRows
-            }),
+            body: JSON.stringify(payload)
           });
-        }
-        catch (fetchErr) {
+        } catch (fetchErr) {
+          console.error("Fetch failed entirely:", fetchErr);
           throw new Error(
-            'Cannot reach the webhook. Possible causes:\n' +
-            '1. Open this file from a web server, not directly from your desktop (file://).\n' +
-            '2. Make sure the workflow is ACTIVE in n8n (not just saved).\n' +
-            '3. Use the production URL: https://imworkflow.intermesh.net/webhook/auditor — not webhook-test.\n' +
-            'Raw error: ' + fetchErr.message
+            `<strong>Network Error: Failed to fetch.</strong><br><br>
+        Since it works in Postman but fails in the browser (even on GitHub Pages), this means <code>imworkflow.intermesh.net</code> is blocking the browser request.<br><br>
+        <strong>Common Reasons:</strong><br>
+        1. <strong>CORS Options Block:</strong> Your proxy/gateway is explicitly dropping the <code>OPTIONS</code> preflight request before it even reaches n8n.<br>
+        2. <strong>SSL Certificate:</strong> The SSL certificate on <code>imworkflow.intermesh.net</code> is self-signed or invalid. Postman ignores this; browsers strictly block it.<br>
+        3. <strong>VPN/Intranet rules:</strong> The corporate firewall allows Postman user-agents but drops browser fetches.<br><br>
+        <em>Please check the "Network" or "Console" tab in Chrome DevTools for the exact CORS or ERR_CERT warning.</em>`
           );
         }
 
         setStep('AI AGENTS RUNNING');
 
-        if (!res.ok) throw new Error('Webhook returned HTTP ' + res.status + ' ' + res.statusText);
+        if (!res.ok) throw new Error(`Webhook returned HTTP ${res.status} ${res.statusText}`);
 
         let json;
         try { json = await res.json(); }
