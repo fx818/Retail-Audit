@@ -9,6 +9,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
     *,
     *::before,
@@ -675,19 +678,20 @@
       <div class="drop-row">
         <div class="dropzone" id="dz-bl" onclick="document.getElementById('fi-bl').click()"
           ondragover="dzOver(event,'dz-bl')" ondragleave="dzLeave('dz-bl')" ondrop="dzDrop(event,'dz-bl','bl')">
-          <input id="fi-bl" type="file" accept=".csv,.tsv,.txt" style="display:none" onchange="fileChosen(this,'bl')" />
+          <input id="fi-bl" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none"
+            onchange="fileChosen(this,'bl')" />
           <div class="dz-icon" id="dz-bl-icon">📄</div>
           <div class="dz-title" id="dz-bl-name">BL Sheet</div>
-          <div class="dz-sub">CSV / TSV &nbsp;·&nbsp; drag &amp; drop or click</div>
+          <div class="dz-sub">Excel / CSV &nbsp;·&nbsp; drag &amp; drop or click</div>
         </div>
 
         <div class="dropzone" id="dz-eve" onclick="document.getElementById('fi-eve').click()"
           ondragover="dzOver(event,'dz-eve')" ondragleave="dzLeave('dz-eve')" ondrop="dzDrop(event,'dz-eve','eve')">
-          <input id="fi-eve" type="file" accept=".csv,.tsv,.txt" style="display:none"
+          <input id="fi-eve" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none"
             onchange="fileChosen(this,'eve')" />
           <div class="dz-icon" id="dz-eve-icon">📊</div>
           <div class="dz-title" id="dz-eve-name">Evidence Sheet</div>
-          <div class="dz-sub">CSV / TSV &nbsp;·&nbsp; drag &amp; drop or click</div>
+          <div class="dz-sub">Excel / CSV &nbsp;·&nbsp; drag &amp; drop or click</div>
         </div>
       </div>
 
@@ -791,54 +795,51 @@
     const isSR = r => { const v = nv(r['System RT']); return v === '1' || v === 'retail'; };
     const isNR = r => { const v = nv(r['System RT']); return v === '0' || v === 'non-retail'; };
 
-    function parseCSV(text) {
-      const lines = text.trim().split(/\r?\n/);
-      if (!lines.length) return [];
-      const sep = lines[0].includes('\t') ? '\t' : ',';
-      function sl(line) {
-        const res = []; let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-          else if (ch === sep && !inQ) { res.push(cur.trim()); cur = ''; }
-          else cur += ch;
-        }
-        res.push(cur.trim()); return res;
-      }
-      const hdr = sl(lines[0]);
-      return lines.slice(1).filter(l => l.trim()).map(line => {
-        const v = sl(line), o = {};
-        hdr.forEach((h, i) => {
-          let val = v[i] ?? '';
-          if (val !== '' && !isNaN(val)) val = Number(val);
-          o[h] = val;
-        });
-        return o;
-      });
-    }
-
     function dzOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('hover'); }
     function dzLeave(id) { document.getElementById(id).classList.remove('hover'); }
     function dzDrop(e, id, slot) { e.preventDefault(); dzLeave(id); const f = e.dataTransfer.files[0]; if (f) loadFile(f, slot); }
     function fileChosen(el, slot) { if (el.files[0]) loadFile(el.files[0], slot); }
 
+    // ✨ UPDATE: We now parse the Excel/CSV file immediately using SheetJS
     function loadFile(file, slot) {
       const r = new FileReader();
+
       r.onload = ev => {
-        const d = { name: file.name, raw: ev.target.result };
-        if (slot === 'bl') {
-          S.blFile = d;
-          document.getElementById('dz-bl').classList.add('loaded');
-          document.getElementById('dz-bl-icon').textContent = '✅';
-          document.getElementById('dz-bl-name').textContent = file.name;
-        } else {
-          S.eveFile = d;
-          document.getElementById('dz-eve').classList.add('loaded');
-          document.getElementById('dz-eve-icon').textContent = '✅';
-          document.getElementById('dz-eve-name').textContent = file.name;
+        try {
+          // Create a Uint8Array from the file buffer
+          const data = new Uint8Array(ev.target.result);
+
+          // Read the workbook natively using SheetJS
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          // Get the first sheet name
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          // Convert the sheet directly to JSON!
+          // defval ensures empty cells remain empty strings, not omitted keys
+          const parsedRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+          const d = { name: file.name, rows: parsedRows };
+
+          if (slot === 'bl') {
+            S.blFile = d;
+            document.getElementById('dz-bl').classList.add('loaded');
+            document.getElementById('dz-bl-icon').textContent = '✅';
+            document.getElementById('dz-bl-name').textContent = file.name;
+          } else {
+            S.eveFile = d;
+            document.getElementById('dz-eve').classList.add('loaded');
+            document.getElementById('dz-eve-icon').textContent = '✅';
+            document.getElementById('dz-eve-name').textContent = file.name;
+          }
+        } catch (err) {
+          showError("Error reading file: " + err.message + ". Ensure it's a valid Excel or CSV file.");
         }
       };
-      r.readAsText(file);
+
+      // Natively read binary file data instead of plain text
+      r.readAsArrayBuffer(file);
     }
 
     function showError(msg) {
@@ -859,24 +860,18 @@
       if (!S.blFile) { showError('Please upload the BL Sheet first.'); return; }
       if (!S.eveFile) { showError('Please upload the Evidence Sheet first.'); return; }
 
-      setLoading(true); setStep('PARSING FILES');
+      setLoading(true); setStep('SENDING TO WORKFLOW');
 
       try {
-        const blRows = parseCSV(S.blFile.raw);
-        const eveRows = parseCSV(S.eveFile.raw);
-
         const payload = {
-          bl_data: blRows,
-          evidence_data: eveRows
+          bl_data: S.blFile.rows,
+          evidence_data: S.eveFile.rows
         };
 
-        console.log("Constructed payload matches Postman format:", payload);
-
-        setStep('SENDING TO WORKFLOW');
+        console.log("Sending payload matching Postman format:", payload);
 
         let res;
         try {
-          // Send EXACTLY the same headers as Postman.
           res = await fetch(WEBHOOK_URL, {
             method: 'POST',
             headers: {
