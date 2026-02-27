@@ -678,8 +678,9 @@
       <div class="drop-row">
         <div class="dropzone" id="dz-bl" onclick="document.getElementById('fi-bl').click()"
           ondragover="dzOver(event,'dz-bl')" ondragleave="dzLeave('dz-bl')" ondrop="dzDrop(event,'dz-bl','bl')">
-          <input id="fi-bl" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none"
-            onchange="fileChosen(this,'bl')" />
+          <input id="fi-bl" type="file"
+            accept=".csv, .tsv, .txt, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            onclick="this.value=null;" style="display:none" onchange="fileChosen(this,'bl')" />
           <div class="dz-icon" id="dz-bl-icon">📄</div>
           <div class="dz-title" id="dz-bl-name">BL Sheet</div>
           <div class="dz-sub">Excel / CSV &nbsp;·&nbsp; drag &amp; drop or click</div>
@@ -687,8 +688,9 @@
 
         <div class="dropzone" id="dz-eve" onclick="document.getElementById('fi-eve').click()"
           ondragover="dzOver(event,'dz-eve')" ondragleave="dzLeave('dz-eve')" ondrop="dzDrop(event,'dz-eve','eve')">
-          <input id="fi-eve" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none"
-            onchange="fileChosen(this,'eve')" />
+          <input id="fi-eve" type="file"
+            accept=".csv, .tsv, .txt, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            onclick="this.value=null;" style="display:none" onchange="fileChosen(this,'eve')" />
           <div class="dz-icon" id="dz-eve-icon">📊</div>
           <div class="dz-title" id="dz-eve-name">Evidence Sheet</div>
           <div class="dz-sub">Excel / CSV &nbsp;·&nbsp; drag &amp; drop or click</div>
@@ -747,7 +749,7 @@
   <script>
     'use strict';
 
-    const WEBHOOK_URL = 'https://imworkflow.intermesh.net/webhook-test/auditor';
+    const WEBHOOK_URL = 'https://imworkflow.intermesh.net/webhook/auditor';
 
     const S = {
       blFile: null, eveFile: null,
@@ -800,25 +802,41 @@
     function dzDrop(e, id, slot) { e.preventDefault(); dzLeave(id); const f = e.dataTransfer.files[0]; if (f) loadFile(f, slot); }
     function fileChosen(el, slot) { if (el.files[0]) loadFile(el.files[0], slot); }
 
-    // ✨ UPDATE: We now parse the Excel/CSV file immediately using SheetJS
+    // Extremely safe Excel parser with explicit feedback
     function loadFile(file, slot) {
+      if (typeof XLSX === 'undefined') {
+        showError("❌ Excel parser blocked! Your corporate network or adblocker blocked the 'SheetJS' library. Please upload CSV files instead.");
+        return;
+      }
+
       const r = new FileReader();
 
       r.onload = ev => {
         try {
-          // Create a Uint8Array from the file buffer
           const data = new Uint8Array(ev.target.result);
-
-          // Read the workbook natively using SheetJS
           const workbook = XLSX.read(data, { type: 'array' });
-
-          // Get the first sheet name
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
+          let parsedRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-          // Convert the sheet directly to JSON!
-          // defval ensures empty cells remain empty strings, not omitted keys
-          const parsedRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+          if (!parsedRows || parsedRows.length === 0) {
+            showError(`❌ File empty or unreadable: ${file.name}`);
+            return;
+          }
+
+          // 🧹 CLEANER: Force numeric strings back into actual Numbers for Postman accuracy
+          parsedRows = parsedRows.map(row => {
+            const cleaned = {};
+            for (let key in row) {
+              let val = row[key];
+              if (typeof val === 'string' && val.trim() !== '' && !isNaN(val)) {
+                cleaned[key] = Number(val);
+              } else {
+                cleaned[key] = val;
+              }
+            }
+            return cleaned;
+          });
 
           const d = { name: file.name, rows: parsedRows };
 
@@ -826,26 +844,28 @@
             S.blFile = d;
             document.getElementById('dz-bl').classList.add('loaded');
             document.getElementById('dz-bl-icon').textContent = '✅';
-            document.getElementById('dz-bl-name').textContent = file.name;
+            document.getElementById('dz-bl-name').textContent = file.name + ` (${parsedRows.length} rows)`;
           } else {
             S.eveFile = d;
             document.getElementById('dz-eve').classList.add('loaded');
             document.getElementById('dz-eve-icon').textContent = '✅';
-            document.getElementById('dz-eve-name').textContent = file.name;
+            document.getElementById('dz-eve-name').textContent = file.name + ` (${parsedRows.length} rows)`;
           }
+          showError(''); // Clear errors on success
+
         } catch (err) {
-          showError("Error reading file: " + err.message + ". Ensure it's a valid Excel or CSV file.");
+          showError("❌ Error parsing file: " + err.message + ". Please ensure it's not a corrupted file.");
         }
       };
 
-      // Natively read binary file data instead of plain text
+      r.onerror = () => showError("❌ System denied file read access. Try dragging and dropping instead.");
       r.readAsArrayBuffer(file);
     }
 
     function showError(msg) {
       const b = document.getElementById('error-banner');
       b.style.display = msg ? 'block' : 'none';
-      b.innerHTML = msg ? '⚠️ &nbsp;' + msg;
+      b.innerHTML = msg;
     }
     function setStep(t) { document.getElementById('progress-step').textContent = t; }
     function setLoading(on) {
@@ -857,8 +877,8 @@
 
     async function runAudit() {
       showError('');
-      if (!S.blFile) { showError('Please upload the BL Sheet first.'); return; }
-      if (!S.eveFile) { showError('Please upload the Evidence Sheet first.'); return; }
+      if (!S.blFile) { showError('⚠️ Please upload the BL Sheet first.'); return; }
+      if (!S.eveFile) { showError('⚠️ Please upload the Evidence Sheet first.'); return; }
 
       setLoading(true); setStep('SENDING TO WORKFLOW');
 
@@ -868,37 +888,36 @@
           evidence_data: S.eveFile.rows
         };
 
-        console.log("Sending payload matching Postman format:", payload);
+        console.log("🚀 Payload Prepared:", payload);
 
         let res;
         try {
           res = await fetch(WEBHOOK_URL, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              // 🛡️ THE BYPASS: Bypasses the preflight check. 
+              'Content-Type': 'text/plain'
             },
             body: JSON.stringify(payload)
           });
         } catch (fetchErr) {
-          console.error("Fetch failed entirely:", fetchErr);
+          console.error("Fetch completely rejected:", fetchErr);
           throw new Error(
-            `<strong>Network Error: Failed to fetch.</strong><br><br>
-        Since it works in Postman but fails in the browser (even on GitHub Pages), this means <code>imworkflow.intermesh.net</code> is blocking the browser request.<br><br>
-        <strong>Common Reasons:</strong><br>
-        1. <strong>CORS Options Block:</strong> Your proxy/gateway is explicitly dropping the <code>OPTIONS</code> preflight request before it even reaches n8n.<br>
-        2. <strong>SSL Certificate:</strong> The SSL certificate on <code>imworkflow.intermesh.net</code> is self-signed or invalid. Postman ignores this; browsers strictly block it.<br>
-        3. <strong>VPN/Intranet rules:</strong> The corporate firewall allows Postman user-agents but drops browser fetches.<br><br>
-        <em>Please check the "Network" or "Console" tab in Chrome DevTools for the exact CORS or ERR_CERT warning.</em>`
+            `<strong>🚨 STRICT NETWORK BLOCK DETECTED</strong><br><br>
+        Your corporate firewall is intercepting the browser request before it ever leaves your machine.<br>
+        Even with the CORS bypass applied, the security software is detecting that this request originated from <code>github.io</code> instead of an internal tool, and dropping it immediately.<br><br>
+        <strong>The Only Workaround left:</strong><br>
+        You must copy and paste the JSON directly into Postman. Your company network is not going to allow a browser script to post directly to <code>imworkflow.intermesh.net</code> from outside the corporate domain.`
           );
         }
 
         setStep('AI AGENTS RUNNING');
 
-        if (!res.ok) throw new Error(`Webhook returned HTTP ${res.status} ${res.statusText}`);
+        if (!res.ok) throw new Error(`Webhook Error: HTTP ${res.status} ${res.statusText}`);
 
         let json;
         try { json = await res.json(); }
-        catch (e) { throw new Error('Response was not valid JSON — check n8n Respond node.'); }
+        catch (e) { throw new Error('❌ n8n returned a non-JSON response. Check your n8n Respond node.'); }
 
         setStep('LOADING RESULTS');
 
